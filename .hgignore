@@ -1,0 +1,10 @@
+all-bytes.dat
+amber.egg-info/
+build/
+dist/
+data/
+.git
+.hg
+.mypy_cache
+__pycache__
+.tox
