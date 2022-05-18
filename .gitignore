@@ -1,2 +1,10 @@
+data/
 .git/
 .hg/
+.mypy_cache/
+
+*.egg-info
+*.gz
+*.tgz
+*.pyc
+*.whl

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
 from __future__ import annotations
+
 import logging
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, Sequence
+from typing import Any, Callable, Sequence
 
 logging.basicConfig()
 log = logging.getLogger(__file__)
@@ -19,13 +20,13 @@ class FieldMap:
     """meta data for sql"""
 
     in_name: str
-    data_type: Optional[str] = "VARCHAR"
-    column_name: Optional[str] = None
-    primary_key: Optional[bool] = False
-    keep: Optional[bool] = True
-    default: Optional[str] = None
-    convert: Optional[Callable[[Any], Any]] = null_convert
-    comment: Optional[str] = None
+    data_type: str | None = "VARCHAR"
+    column_name: str | None = None
+    primary_key: bool | None = False
+    keep: bool | None = True
+    default: str | None = None
+    convert: Callable[[Any], Any] | None = null_convert
+    comment: str | None = None
 
 
 def get_in_names(fm: Sequence[FieldMap]) -> Sequence[str]:
@@ -42,9 +43,9 @@ def get_column_names(fm: Sequence[FieldMap]) -> Sequence[str]:
 class TableSpec:
     field_map: Sequence[FieldMap]
     table_name: str
-    primary_key: Optional[str] = None
-    calculate: Optional[Callable[[TableSpec, Any], Any]] = None
-    extra_sql: Optional[List[str]] = None
+    primary_key: str | None = None
+    calculate: Callable[[TableSpec, Any], Any] | None = None
+    extra_sql: list[str] | None = None
 
     def do_calculate(self, timeseries: Any) -> Any:
         if self.calculate:
@@ -63,9 +64,9 @@ class TableSpec:
 
 def compose_create(
     table_name: str,
-    fields: List[FieldMap],
-    primary_key: Optional[str] = None,
-    extra_sql: Optional[List[str]] = None,
+    fields: list[FieldMap],
+    primary_key: str | None = None,
+    extra_sql: list[str] | None = None,
 ) -> str:
     clauses = []
     fdesc = ",\n".join(
@@ -74,7 +75,7 @@ def compose_create(
             f"{f.default if f.default is not None else ''}".strip()
             for f in fields
             if f.keep
-        ]
+        ],
     )
     clauses.append(f"CREATE TABLE IF NOT EXISTS {table_name} (\n{fdesc}")
     if primary_key:
@@ -84,7 +85,7 @@ def compose_create(
         try:
             for xsql in extra_sql:
                 clauses.append(
-                    xsql.format(table_name=table_name, primary_key=primary_key)
+                    xsql.format(table_name=table_name, primary_key=primary_key),
                 )
         except Exception:
             print("xsql %s table_name %s primary_key %s", xsql, table_name, primary_key)
@@ -94,7 +95,9 @@ def compose_create(
 
 
 def compose_insert(
-    field_names: Sequence, table_name: str, xclause: Optional[str] = None
+    field_names: Sequence,
+    table_name: str,
+    xclause: str | None = None,
 ) -> str:
     """compose parameterized insert SQL
 
