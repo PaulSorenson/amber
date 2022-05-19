@@ -2,8 +2,10 @@
 
 import logging
 from typing import Dict, Tuple
-from .datacomposer import FieldMap, compose_create, compose_insert, TableSpec
+
 import pandas as pd
+
+from .datacomposer import FieldMap, TableSpec, compose_create, compose_insert
 
 logging.basicConfig()
 log = logging.getLogger(__file__)
@@ -91,7 +93,9 @@ forecast_rolling_fields = [
     FieldMap("percentileRank", "DOUBLE PRECISION"),
     # these two fields are only populated for forecasts (not actuals)
     FieldMap(
-        "forecastedAt", "TIMESTAMPTZ", comment="30 minute period when forecast was made"
+        "forecastedAt",
+        "TIMESTAMPTZ",
+        comment="30 minute period when forecast was made",
     ),
     FieldMap("wholesaleKWHPriceRange", "DOUBLE PRECISION[]", comment="[min, max]"),
     FieldMap("postcode"),
@@ -145,7 +149,8 @@ def calculate_forecast(spec: TableSpec, df: pd.DataFrame) -> pd.DataFrame:
 
 def calculate_forecast_rolling(spec: TableSpec, df: pd.DataFrame) -> pd.DataFrame:
     of = df.loc[
-        df.periodType == "FORECAST", df.columns.intersection(spec.get_column_names())
+        df.periodType == "FORECAST",
+        df.columns.intersection(spec.get_column_names()),
     ]
     of["forecast_lead"] = (of.period - of.forecastedAt).dt.seconds
     if "wholesaleKWHPriceRange" in of.columns:
@@ -156,7 +161,8 @@ def calculate_forecast_rolling(spec: TableSpec, df: pd.DataFrame) -> pd.DataFram
 # https://docs.timescale.com/latest/api#create_hypertable
 
 DEFAULT_HYPERTABLE = (
-    "SELECT create_hypertable('{table_name}', '{primary_key}', " "if_not_exists => TRUE);"
+    "SELECT create_hypertable('{table_name}', '{primary_key}', "
+    "if_not_exists => TRUE);"
 )
 
 table_specs = [
@@ -191,7 +197,7 @@ table_specs = [
                 "SELECT create_hypertable('{table_name}', 'period', "
                 "if_not_exists => TRUE);"
                 # "partitioning_column => 'forecast_lead', number_partitions => 1);"
-            )
+            ),
         ],
     ),
 ]

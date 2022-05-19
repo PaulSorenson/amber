@@ -1,7 +1,6 @@
 # /usr/bin python3
 
 import asyncio
-import asyncpg as apg
 import configparser
 import json
 import logging
@@ -15,9 +14,11 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Sequence
 
 import asyncio_mqtt as mq
+import asyncpg as apg
 import keyring
 import pandas as pd
-from aioconveyor import AioConveyor, Event
+from aioconveyor.aioconveyor import AioConveyor, Event
+
 from . import amber_data as ad
 from . import datacomposer as dc
 from .dateawarejsonenc import DateAwareJSONEncoder
@@ -84,7 +85,7 @@ def to_timeseries(data: Dict[str, Any], rounding: Optional[int] = 3) -> pd.DataF
         except KeyError:
             log.warning(
                 f"column '{col}' not found when trying to convert to float."
-                "Column will be missing for insert"
+                "Column will be missing for insert",
             )
             # timeseries[col] = None
     timeseries["postcode"] = postcode
@@ -113,8 +114,9 @@ def get_db_args(defaults: Optional[Dict[str, str]] = None) -> ArgumentParser:
         "--host",
         default=None,
         help="Postgres remote host. "
-        "Provide an empty string to override any config file setting if you want to test "
-        "without writing to a database. In this case the data will be printed to stdout",
+        "Provide an empty string to override any config file setting "
+        "if you want to test without writing to a database. In this "
+        "case the data will be printed to stdout",
     )
     ap.add_argument("--user", default=user, help="Override unix username.")
     ap.add_argument(
@@ -176,7 +178,7 @@ def get_args() -> Namespace:
     config.read_dict({"db": {}, "common": {}})
     try:
         config_path = find_config_file(Path(CONFIG_FILENAME))
-        with open(config_path, "r") as cf:
+        with open(config_path) as cf:
             config.read_file(cf)
         log.info(f"using config from: '{config_path}'")
     except FileNotFoundError as e:
@@ -197,7 +199,10 @@ def get_args() -> Namespace:
         help="Device read interval. Rounded to the nearest second.",
     )
     ap.add_argument(
-        "--loop-offset", default=LOOP_OFFSET, type=int, help="Device read offset."
+        "--loop-offset",
+        default=LOOP_OFFSET,
+        type=int,
+        help="Device read offset.",
     )
     ap.add_argument("--mq-host", help="Specifying a host turns on mqtt writer.")
     ap.add_argument(
@@ -216,7 +221,11 @@ def get_args() -> Namespace:
         help="Set this string to a syslog port to turn on syslog (%(default)s). "
         "Can also specify protocol, eg 514/tcp",
     )
-    ap.add_argument("--write-json", action="store_true", help="write the 'raw' json data")
+    ap.add_argument(
+        "--write-json",
+        action="store_true",
+        help="write the 'raw' json data",
+    )
     opt = ap.parse_args()
     if not opt.password:
         opt.password = get_password(user=opt.user)
@@ -224,7 +233,9 @@ def get_args() -> Namespace:
 
 
 def get_password(
-    user: str, password: Optional[str] = None, account: str = "postgres"
+    user: str,
+    password: Optional[str] = None,
+    account: str = "postgres",
 ) -> str:
     """try to pull password from keyring or prompt
 
@@ -316,7 +327,9 @@ class MqttConsumer:
                 d = df.squeeze().dropna().to_dict()
                 msg = self.enc.encode(d)
                 await self.client.publish(
-                    self.topic_template.format(series=spec.table_name), msg, qos=1
+                    self.topic_template.format(series=spec.table_name),
+                    msg,
+                    qos=1,
                 )
             except Exception:
                 log.exception("mqtt actual_5min publish failed")
@@ -345,7 +358,10 @@ class PostgresConsumer:
         user = getuser() if self.user is None else self.user
         log.info(f"user: {user} db: {self.database} host: {self.host}")
         self.conn = await apg.connect(
-            user=self.user, database=self.database, host=self.host, password=self.password
+            user=self.user,
+            database=self.database,
+            host=self.host,
+            password=self.password,
         )
 
     async def create_tables(self):
@@ -396,11 +412,14 @@ class PostgresConsumer:
                     ins_sql = dc.compose_insert(fields, table_name=spec.table_name)
                     try:
                         await self.conn.executemany(
-                            ins_sql, [list(d.values()) for d in args]
+                            ins_sql,
+                            [list(d.values()) for d in args],
                         )
                     except apg.exceptions.UniqueViolationError:
                         # this can happen during testing if writing in < 5 min
-                        log.warning("unique violation - could be a restart so continuing")
+                        log.warning(
+                            "unique violation - could be a restart so continuing",
+                        )
                     continue
 
                 try:
@@ -413,7 +432,7 @@ class PostgresConsumer:
                 except apg.exceptions.UniqueViolationError:
                     # this can happen during testing if writing in < 5 min
                     log.warning(
-                        "unique violation - could be a fast restart so continuing"
+                        "unique violation - could be a fast restart so continuing",
                     )
                 except Exception:
                     log.exception(
@@ -430,7 +449,7 @@ class PostgresConsumer:
         return 0
 
 
-async def main():
+async def amain():
     opt = get_args()
     log.setLevel(level=opt.log_level)
     # consumers = [csv_consume]
@@ -443,7 +462,10 @@ async def main():
         log.info(f"added mqtt consumer: {opt.mq_host}")
     if opt.host:
         pg_writer = PostgresConsumer(
-            host=opt.host, database=opt.database, user=opt.user, password=opt.password
+            host=opt.host,
+            database=opt.database,
+            user=opt.user,
+            password=opt.password,
         )
         consumers.append(pg_writer.write)
         log.info(f"added db consumer: {opt.host}")
@@ -462,8 +484,9 @@ async def main():
     log.info("main: conveyor thread no longer running, terminating")
 
 
+def main():
+    asyncio.run(amain())
+
+
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        log.error("amber exiting")
+    main()
