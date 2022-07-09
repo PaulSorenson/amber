@@ -1,0 +1,4 @@
+services:
+  aurorapv:
+    image: amberv1
+    build: .

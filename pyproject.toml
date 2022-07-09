@@ -3,6 +3,10 @@ name = "amberapi_v1"
 version = "0.1.0"
 description = ""
 authors = ["paul sorenson <paul@metrak.com>"]
+packages = [
+    {include = "amberapi_v1"},
+    {include = "aioconveyor"}
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -10,7 +14,6 @@ asyncpg = "^0.25.0"
 asyncio-mqtt = "^0.12.1"
 keyring = "^23.5.0"
 pandas = "^1.4.2"
-aioconveyor = {git = "https://github.com/PaulSorenson/aioconveyor", rev = "main"}
 
 [tool.poetry.dev-dependencies]
 
