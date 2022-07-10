@@ -2,10 +2,8 @@
 
 import asyncio
 import configparser
-import json
 import logging
 import site
-import subprocess
 import sys
 from argparse import ArgumentParser, Namespace
 from functools import partial
@@ -17,6 +15,7 @@ import asyncio_mqtt as mq
 import asyncpg as apg
 import keyring
 import pandas as pd
+import requests
 
 from aioconveyor.aioconveyor import AioConveyor, Event
 
@@ -49,19 +48,8 @@ current_row = int
 
 
 def fetch_data(postcode: str) -> Dict[str, Any]:
-    cmd = [
-        "curl",
-        "-X",
-        "POST",
-        URL,
-        "-H",
-        "Content-Type: application/json",
-        "-d",
-        f'{{"postcode": "{postcode}"}}',
-    ]
-    log.info(cmd)
-    cp = subprocess.run(args=cmd, capture_output=True)
-    return json.loads(cp.stdout)
+    resp = requests.post(url=URL, json={"postcode": postcode})
+    return resp.json()
 
 
 def to_timeseries(data: Dict[str, Any], rounding: Optional[int] = 3) -> pd.DataFrame:
